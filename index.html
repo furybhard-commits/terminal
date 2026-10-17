@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TERMINAL ARG</title>
+    
+    <!-- Tailwind CSS para utilitários de layout simples -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonte Monospaçada estilo Terminal -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==========================================================================
+           ESTILOS CUSTOMIZADOS - VISUAL TERMINAL MINIMALISTA
+           ========================================================================== */
+        
+        :root {
+            --bg-color: #0d0f12;
+            --text-color: #00ff66;
+            --text-dim: #00993d;
+            --error-color: #ff3344;
+            --card-bg: #13171c;
+            --border-color: #1e262f;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Suave efeito de brilho nos textos */
+        .glow {
+            text-shadow: 0 0 6px rgba(0, 255, 102, 0.4);
+        }
+
+        .glow-red {
+            text-shadow: 0 0 6px rgba(255, 51, 68, 0.5);
+        }
+
+        /* Estilização da caixa de texto do terminal */
+        .term-input {
+            background-color: #080a0c;
+            color: #ffffff;
+            border: 1px solid var(--border-color);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .term-input:focus {
+            border-color: var(--text-color);
+            box-shadow: 0 0 8px rgba(0, 255, 102, 0.2);
+        }
+
+        /* Botão Enviar Minimalista */
+        .term-btn {
+            background-color: rgba(0, 255, 102, 0.08);
+            border: 1px solid var(--text-color);
+            color: var(--text-color);
+            transition: all 0.2s ease;
+        }
+
+        .term-btn:hover {
+            background-color: var(--text-color);
+            color: #000000;
+        }
+
+        .term-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Animação suave para troca de tela */
+        .fade-in {
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-4 md:p-8 selection:bg-emerald-500 selection:text-black">
+
+    <!-- ==========================================================================
+         MÚSICA DE FUNDO & BOTÃO DISCRETO (CANTO SUPERIOR DIREITO)
+         ========================================================================== -->
+    <!-- 
+        COMO ALTERAR A MÚSICA: 
+        Substitua 'musica.mp3' no 'src' abaixo pelo caminho/nome do seu arquivo de áudio baixado. 
+    -->
+    <audio id="musicaBg" loop preload="auto">
+        <source src="musica.mp3" type="audio/mpeg">
+    </audio>
+
+    <header class="w-full max-w-2xl flex justify-between items-center text-xs opacity-75">
+        <span class="tracking-widest">// OTHER_SIDE_TERMINAL_v1.3</span>
+        
+        <!-- Botão Discreto de Áudio -->
+        <button id="audioBtn" onclick="alternarAudio()" class="hover:text-white transition-colors flex items-center space-x-1 border border-emerald-900 px-2 py-1 rounded">
+            <span id="audioIcon">🔇</span>
+            <span id="audioTexto">SOM: OFF</span>
+        </button>
+    </header>
+
+
+    <!-- ==========================================================================
+         ÁREA CENTRAL DO PUZZLE / ENIGMA
+         ========================================================================== -->
+    <main class="w-full max-w-2xl my-auto py-8">
+        
+        <!-- PAINEL DO ENIGMA -->
+        <div id="painelPuzzle" class="bg-[#13171c] border border-[#1e262f] rounded-lg p-6 md:p-8 shadow-2xl fade-in space-y-6">
+            
+            <!-- Identificador da Fase -->
+            <div class="border-b border-emerald-900/60 pb-3 flex justify-between items-center text-xs">
+                <span id="faseId" class="text-emerald-400 font-bold tracking-wider uppercase">FASE 01</span>
+                <span id="faseTitulo" class="text-gray-400">CARREGANDO...</span>
+            </div>
+
+            <!-- Texto da Charada / Enigma -->
+            <div id="faseTexto" class="text-sm md:text-base leading-relaxed text-gray-200 whitespace-pre-line">
+                <!-- O texto da pergunta é inserido aqui via JavaScript -->
+            </div>
+
+            <!-- Imagem Opcional do Enigma -->
+           <div id="containerImagem" class="hidden flex justify-center py-2">
+
+           <img id="faseImagem" src="" alt="Imagem do enigma" class="hidden max-h-72 max-w-full object-contain rounded border border-emerald-900/40">
+
+           <video id="faseVideo" class="hidden max-h-72 max-w-full rounded border border-emerald-900/40" controls playsinline preload="metadata" ></video>
+            </div>
+
+            <!-- Mensagem de Feedback / Status (Acesso Negado / Aceito) -->
+            <div id="mensagemStatus" class="hidden text-xs md:text-sm font-bold text-center py-2 px-3 rounded transition-all"></div>
+
+            <!-- Formulário Simples de Resposta -->
+            <form id="formResposta" onsubmit="validarResposta(event)" class="flex flex-col sm:flex-row gap-3 pt-2">
+                <input 
+                    type="text" 
+                    id="inputResposta" 
+                    placeholder="digite sua resposta..." 
+                    autocomplete="off" 
+                    spellcheck="false"
+                    class="term-input flex-1 px-4 py-2.5 rounded text-sm tracking-wider"
+                >
+                <button type="submit" class="term-btn px-6 py-2.5 rounded font-bold text-sm tracking-wider">
+                    ENVIAR
+                </button>
+            </form>
+
+        </div>
+
+        <!-- TELA FINAL (EXIBIDA QUANDO COMPLETAR TODOS OS PUZZLES) -->
+        <div id="telaFinal" class="hidden bg-[#13171c] border border-emerald-500/50 rounded-lg p-8 text-center space-y-4 fade-in">
+            <h2 class="text-xl font-bold text-emerald-400 glow">DESTINO REVELADO</h2>
+            <p id="textoFinal" class="text-sm text-gray-300 leading-relaxed">
+                Aguardo vocês lá...
+            </p>
+            <div class="pt-4">
+                <button onclick="reiniciarJogo()" class="term-btn text-xs px-4 py-2 rounded">
+                    ↺ REINICIAR
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+
+    <!-- Roda-pé minimalista -->
+    <footer class="w-full max-w-2xl text-center text-[11px] text-emerald-900 tracking-widest">
+        ERRO 404 • OLHOS SEMPRE ABERTOS
+    </footer>
+
+
+    <!-- ==========================================================================
+         LÓGICA JAVASCRIPT & CONFIGURAÇÃO DOS PUZZLES
+         ========================================================================== -->
+    <script>
+        /* ==========================================================================
+           1. LISTA DE PUZZLES / FASES (EDITE AQUI O SEU ARG!)
+           ========================================================================== 
+           Instruções de edição:
+           - id: Número identificador da fase.
+           - titulo: Título exibido no topo.
+           - texto: A pergunta, charada ou texto explicativo.
+           - imagem: Caminho da imagem local (ex: 'imagens/fase1.png') ou URL. Deixe "" se não tiver imagem.
+           - respostas: Array com as respostas aceitas (o sistema ignora acentos, maiúsculas e espaços extras).
+           - mensagemSucesso: Mensagem rápida que aparece ao acertar a resposta.
+        */
+        const PUZZLES = [
+            {
+                id: 1,
+                titulo: "Estagio 01 — Correntes",
+                texto: "As correntes que prendem as pessoas a realidade fazem parte do destino.\nQuem é a sua marca?",
+                imagem: "", // Exemplo sem imagem
+                respostas: ["Rafa", "Gabriel", "Jack", "Noroi", "Pizza", "rafa", "gabriel", "jack", "noroi", "pizza", "Fury", "fury"],
+                mensagemSucesso: "Bem vindo caro marcado."
+            },
+            {
+                id: 2,
+                titulo: "Estagio 02 — Destino",
+                texto: "Nesse mundo onde o destino de todos é regido por um ser. \nHá 5 individuos na realidadeque não são manipulados por isso. \n\nEsses individuos são...",
+                // Substitua a URL abaixo pela sua imagem local, ex: 'fase2.jpg'
+                imagem: "",
+                respostas: ["Marcados", "marcados", "os maracados", "Os Marcados", "Os marcados", "os Marcados"],
+                mensagemSucesso: "Se quiserem viver."
+            },
+            {
+                id: 3,
+                titulo: "Estagio 03 — Controle",
+                texto: "A realidade é a maior mentira que nos forçamos a acreditar. \n'O meu conselho será firme, e farei toda a minha vontade'.\nIsaías ??:??",
+                imagem: "",
+                respostas: ["4610"],
+                mensagemSucesso: "Agradem-o."
+            },
+            {
+                id: 4,
+                titulo: "Estagio 04 — Lembrem de mim",
+                texto: "Uma labirinto infinito, não possui começo, nem fim, seus corredores diversos variam, mas raramente possuem piedade. \nUm conto coletivo que se tornou real.",
+                imagem: "",
+                respostas: ["Backrooms", "backrooms", "back rooms", "Back rooms"],
+                mensagemSucesso: "Caso contrario."
+            },
+            {
+                id: 5,
+                titulo: "Estagio 05 — SOCORRO",
+                texto: "Se tudo é uma mentira... \nẼn̠t͚ã̟̑o͆ p̈or͒ q͔u̲̇e̽ e͌u̬ ḙx͌isͫtͫo̍.̽..̇ \nS̔e͓͙ o͓͇ de͖̖ͭst̥͓i̔nͫ̑o͑ ja̔̆ f̻̽o͕i̲̥ͥ͑ d̯̘ͦe͔̹̿fi̘n̬͕̽idͫo͙͗ͥ \nP̵̟̖ͨ̉̅ő̶͓̽ͣṙ̷̫͔͗͒ q͔̲́ṵe͚̠̺ͯ Ǒ̶̰ͥ C͖̜̥A̬͓Ô̵ͧͩS̨̠ E̵̯̋X̤̝ͅI̙̩ͮ͋ͬͅS̸̝͂ͧT͑ͮ̑E̥?͎͚̻̿ͥ̄ \nP̶O͍͐͆Ŗ̖̋͊ F̶͉̹̥ͯͬḀ̧̳V̶͕̲̘̽̽̾ͮO̶̳̞͉̐̓Ŗ̭̘̽͛͆̑ F̵̫͙̪̑Ȃ̱͕̘̋L̦͙͗A̴ͨ̎ͦ!͌͊ͧͭ \nQ̸̝̬̥͈͚ͤ͂Ů̴̵͕̭ͤ͒̒ͫA̳̯͈͍̎ͤ̓ͩL̲̮͎̎ͧͅ O̧̧̝͎̬͂̀ S̴̴͙͓͕̅E̵̴̥̥̩̙̳͈̔ͨ̐̂́͑N̶̩̟̆̑̈ͣͤT̼͕͉̜̟̊̄I̸̧͇͓ͯ͆̌D̩̤̬̜̘̰̋̾̔O̵̜̽̔̌ͥ D̶̸̙̝̣͕̋ͤA̲̬̠͈͔͕͋̀ M̶̶̗̠̙̣͚ͣ͐͛ͅÏ̷̧̦͖̼̳̰̀̀ͣ̂ͪN̴̲͔̥͋Ḩ̍̿̐A̴͂̀ E̶̴͉̜͎͑̅̾̌ͦͤX̂̏ͨI̵̧̪̩͌̏S̴̷̭Ṯ̶̩̹͇̿̒ͧĘ̌͑Ǹ̶͍̰̣͕̟̬͌ͤÇ̔͊͛I̸̧̝̻̐̀ͪ̎͋A̶͖͍͕̳̭ͣ̇?̵̣̬̠̩̯̞͑̈̎ͧ",
+                imagem: "anfitras.png",
+                respostas: ["entreter", "Entreter", "divertir", "Divertir", "42", "agradar", "Agradar", "Agrada-lo", "agrada-lo", "se corromper"],
+                mensagemSucesso: "obrigado... e... adeus..."
+            },
+            {
+                id: 6,
+                titulo: "Destino 01 — The Strength",
+                texto: "",
+                imagem: "Jhoseph.mp4",
+                respostas: ["Loucura", "Insanidade", "loucura", "insanidade"],
+                mensagemSucesso: "The Strength reversed"
+            },
+            {
+                id: 7,
+                titulo: "Destino 02 — The Stars",
+                texto: "",
+                imagem: "Leandro.mp4",
+                respostas: ["tetraplegia", "Tetraplegia"],
+                mensagemSucesso: "The Stars reversed"
+            },
+            {
+                id: 8,
+                titulo: "Destino 03 — The Death",
+                texto: "",
+                imagem: "Toji.mp4",
+                respostas: ["Empalado", "empalado"],
+                mensagemSucesso: "The Death"
+            },
+            {
+                id: 9,
+                titulo: "Destino 04 — The Wheel of Fortune",
+                texto: "",
+                imagem: "Joziel.mp4",
+                respostas: ["Decapitação", "decapitação"],
+                mensagemSucesso: "The Wheel of Fortune"
+            },
+            {
+                id: 10,
+                titulo: "Destino 05 — The Hanged Man",
+                texto: "Eu ainda existo",
+                imagem: "",
+                respostas: ["Esquecimento", "esquecimento", "Inexistencia", "inexistencia"],
+                mensagemSucesso: "The Hanged Man"
+            },
+        ];
+
+
+        /* ==========================================================================
+           2. CONTROLE DE ESTADO DO JOGO
+           ========================================================================== */
+        let faseAtualIndex = 0;
+
+        window.onload = function() {
+            // Carrega o progresso salvo no navegador do jogador (se houver)
+            const progressoSalvo = localStorage.getItem("arg_fase_index");
+            if (progressoSalvo !== null) {
+                const idx = parseInt(progressoSalvo, 10);
+                if (!isNaN(idx) && idx >= 0 && idx < PUZZLES.length) {
+                    faseAtualIndex = idx;
+                }
+            }
+            carregarFase();
+        };
+
+        // Renderiza na tela os dados da fase atual
+        function carregarFase() {
+            const puzzle = PUZZLES[faseAtualIndex];
+            if (!puzzle) return;
+
+            // Limpa elementos
+            document.getElementById("inputResposta").value = "";
+            esconderStatus();
+
+            // Atualiza textos
+            document.getElementById("faseId").innerText = `Estagio 0${puzzle.id || (faseAtualIndex + 1)}`;
+            document.getElementById("faseTitulo").innerText = puzzle.titulo || "";
+            document.getElementById("faseTexto").innerText = puzzle.texto || "";
+
+            // Atualiza imagem (se existir)
+            
+            // Atualiza imagem ou vídeo da fase
+            const imgElemento = document.getElementById("faseImagem");
+            const videoElemento = document.getElementById("faseVideo");
+            const containerImg = document.getElementById("containerImagem");
+
+            // Para qualquer vídeo da fase anterior
+            videoElemento.pause();
+            videoElemento.removeAttribute("src");
+            videoElemento.load();
+
+            // Esconde os dois elementos inicialmente
+            imgElemento.classList.add("hidden");
+            videoElemento.classList.add("hidden");
+
+            const arquivo = puzzle.imagem || "";
+            const ehVideo = /\.(mp4|webm|ogg)(\?.*)?$/i.test(arquivo);
+
+            if (arquivo.trim() !== "") {
+                containerImg.classList.remove("hidden");
+
+                if (ehVideo) {
+                    videoElemento.src = arquivo;
+                    videoElemento.classList.remove("hidden");
+                    videoElemento.load();
+                } else {
+                    imgElemento.src = arquivo;
+                    imgElemento.classList.remove("hidden");
+                }
+            } else {
+                containerImg.classList.add("hidden");
+                imgElemento.removeAttribute("src");
+            }
+
+
+            // Animação de entrada suave
+            const painel = document.getElementById("painelPuzzle");
+            painel.classList.remove("fade-in");
+            void painel.offsetWidth; // Força re-flow para reiniciar a animação CSS
+            painel.classList.add("fade-in");
+        }
+
+
+        /* ==========================================================================
+           3. VALIDAÇÃO DA RESPOSTA
+           ========================================================================== */
+        function validarResposta(event) {
+            event.preventDefault();
+
+            const input = document.getElementById("inputResposta");
+            const respostaUsuario = normalizarTexto(input.value);
+
+            if (!respostaUsuario) {
+                exibirStatus("DIGITE UMA RESPOSTA ANTES DE ENVIAR.", "erro");
+                return;
+            }
+
+            const puzzle = PUZZLES[faseAtualIndex];
+
+            // Verifica se a resposta do usuário corresponde a alguma resposta aceita
+            const acertou = puzzle.respostas.some(respostaValida => {
+                return normalizarTexto(respostaValida) === respostaUsuario;
+            });
+
+            if (acertou) {
+                exibirStatus(puzzle.mensagemSucesso || "CÓDIGO ACEITO.", "sucesso");
+                
+                // Avança para a próxima fase após 1.2 segundos
+                setTimeout(() => {
+                    faseAtualIndex++;
+                    localStorage.setItem("arg_fase_index", faseAtualIndex);
+
+                    if (faseAtualIndex >= PUZZLES.length) {
+                        finalizarJogo();
+                    } else {
+                        carregarFase();
+                    }
+                }, 1200);
+
+            } else {
+                exibirStatus("RESPOSTA INCORRETA.", "erro");
+            }
+        }
+
+        // Função para remover acentos, maiúsculas e espaços extras da resposta
+        function normalizarTexto(str) {
+            if (!str) return "";
+            return str
+                .toLowerCase()
+                .trim()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, ""); // Remove acentos
+        }
+
+
+        /* ==========================================================================
+           4. MENSAGENS DE STATUS (FEEDBACK VISUAL)
+           ========================================================================== */
+        function exibirStatus(mensagem, tipo) {
+            const statusEl = document.getElementById("mensagemStatus");
+            statusEl.innerText = mensagem;
+            statusEl.classList.remove("hidden", "text-red-400", "bg-red-950/50", "border-red-800", "text-emerald-400", "bg-emerald-950/50", "border-emerald-800");
+
+            if (tipo === "erro") {
+                statusEl.classList.add("text-red-400", "bg-red-950/50", "border", "border-red-800", "glow-red");
+            } else {
+                statusEl.classList.add("text-emerald-400", "bg-emerald-950/50", "border", "border-emerald-800", "glow");
+            }
+        }
+
+        function esconderStatus() {
+            document.getElementById("mensagemStatus").classList.add("hidden");
+        }
+
+
+        /* ==========================================================================
+           5. FINALIZAÇÃO E REINÍCIO DO JOGO
+           ========================================================================== */
+        function finalizarJogo() {
+            document.getElementById("painelPuzzle").classList.add("hidden");
+            document.getElementById("telaFinal").classList.remove("hidden");
+        }
+
+        function reiniciarJogo() {
+            faseAtualIndex = 0;
+            localStorage.removeItem("arg_fase_index");
+            document.getElementById("telaFinal").classList.add("hidden");
+            document.getElementById("painelPuzzle").classList.remove("hidden");
+            carregarFase();
+        }
+
+
+        /* ==========================================================================
+           6. CONTROLE DE MÚSICA DE FUNDO (BGM)
+           ========================================================================== */
+        function alternarAudio() {
+            const audio = document.getElementById("musicaBg");
+            const icon = document.getElementById("audioIcon");
+            const texto = document.getElementById("audioTexto");
+
+            if (audio.paused) {
+                audio.play().then(() => {
+                    icon.innerText = "🔊";
+                    texto.innerText = "SOM: ON";
+                }).catch(err => {
+                    console.warn("Certifique-se de que o arquivo 'musica.mp3' está na mesma pasta do arquivo HTML.", err);
+                    alert("Aviso: O arquivo 'musica.mp3' não foi encontrado na pasta local.");
+                });
+            } else {
+                audio.pause();
+                icon.innerText = "🔇";
+                texto.innerText = "SOM: OFF";
+            }
+        }
+    </script>
+</body>
+</html>
